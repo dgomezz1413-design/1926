@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1926</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #111210; --s1: #1b1c19; --s2: #232420; --s3: #2c2e29;
+  --border: #333530; --gold: #c8a84b; --gold2: #8a6e2a;
+  --text: #e2ddd4; --dim: #8c8880; --muted: #4a4c47;
+  --green: #5a9e78; --r: 10px;
+}
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 300;
+  height: 100vh; display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 255px 1fr;
+  grid-template-areas: "sidebar header" "sidebar chat" "sidebar inputbar";
+  overflow: hidden;
+}
+
+/* SIDEBAR */
+#sidebar {
+  grid-area: sidebar; background: var(--s1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
+}
+#sidebar::-webkit-scrollbar { width: 3px; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+.sidebar-header { padding: 20px 16px 14px; border-bottom: 1px solid var(--border); }
+.prof-tag { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.prof-avatar {
+  width: 36px; height: 36px;
+  background: linear-gradient(145deg, var(--gold2), var(--gold));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'Lora', serif; font-size: 15px; color: #111; flex-shrink: 0;
+}
+.prof-name { font-family: 'Lora', serif; font-size: 13.5px; color: var(--text); line-height: 1.3; }
+.prof-name small { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
+.status-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); }
+.dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: blink 2.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.sb-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.sb-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 9px; font-weight: 500; display: block; }
+
+#pdf-drop {
+  border: 1px dashed var(--border); border-radius: var(--r);
+  padding: 12px 8px; text-align: center; cursor: pointer;
+  background: var(--s2); transition: all 0.2s;
+}
+#pdf-drop:hover, #pdf-drop.drag { border-color: var(--gold2); background: rgba(200,168,75,0.05); }
+#pdf-drop p { font-size: 11.5px; color: var(--dim); line-height: 1.5; }
+#pdf-drop .icon { font-size: 20px; margin-bottom: 5px; display: block; }
+#pdf-input { display: none; }
+
+#pdf-list { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.pdf-item {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 7px 9px; display: flex; align-items: center; gap: 7px; font-size: 11.5px;
+}
+.pdf-item .pi { color: var(--gold); flex-shrink: 0; }
+.pdf-item .pn { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.pdf-item .pr { color: var(--muted); cursor: pointer; transition: color 0.15s; }
+.pdf-item .pr:hover { color: #c0614a; }
+
+.qa-list { display: flex; flex-direction: column; gap: 5px; }
+.qa-btn {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--dim); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
+  font-weight: 300; padding: 8px 10px; cursor: pointer; text-align: left;
+  transition: all 0.15s; display: flex; align-items: center; gap: 7px;
+}
+.qa-btn:hover { border-color: var(--gold2); color: var(--gold); }
+
+.mem-actions { display: flex; gap: 6px; }
+.mem-btn {
+  flex: 1; background: var(--s2); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--dim); font-family: 'IBM Plex Sans', sans-serif; font-size: 11px;
+  padding: 7px 4px; cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.mem-btn:hover { border-color: var(--gold2); color: var(--gold); }
+
+/* HEADER */
+header {
+  grid-area: header; padding: 14px 24px;
+  border-bottom: 1px solid var(--border); background: var(--s1);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chat-title { font-family: 'Lora', serif; font-size: 14.5px; color: var(--text); }
+.chat-title small { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; color: var(--dim); margin-top: 1px; }
+.clear-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); font-size: 11px; padding: 5px 10px; cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif; transition: all 0.15s;
+}
+.clear-btn:hover { color: var(--dim); }
+
+/* CHAT */
+#chat {
+  grid-area: chat; overflow-y: auto; padding: 24px 24px 8px;
+  display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth;
+}
+#chat::-webkit-scrollbar { width: 3px; }
+#chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.msg { display: flex; gap: 11px; animation: up 0.22s ease; }
+.msg.user { flex-direction: row-reverse; }
+@keyframes up { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+.msg-edit-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); padding: 4px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, color 0.15s;
+  align-self: flex-start; margin-top: 6px; flex-shrink: 0;
+}
+.msg:hover .msg-edit-btn { opacity: 1; }
+.msg-edit-btn:hover { color: var(--gold); }
+
+.msg-av {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; margin-top: 3px;
+}
+.msg.assistant .msg-av { background: linear-gradient(145deg, var(--gold2), var(--gold)); color: #111; font-family: 'Lora', serif; font-size: 13px; }
+.msg.user .msg-av { background: var(--s3); border: 1px solid var(--border); color: var(--dim); font-weight: 500; font-size: 10px; }
+
+.bubble {
+  max-width: 82%; padding: 12px 16px; border-radius: var(--r);
+  font-size: 14px; line-height: 1.85;
+}
+.msg.assistant .bubble { background: var(--s1); border: 1px solid var(--border); border-top-left-radius: 3px; }
+.msg.user .bubble { background: var(--s2); border: 1px solid var(--border); border-top-right-radius: 3px; }
+.bubble strong { color: var(--gold); font-weight: 500; }
+.bubble em { color: var(--dim); font-style: normal; font-size: 13px; }
+.bubble .hl { background: rgba(200,168,75,0.08); border-left: 2px solid var(--gold2); padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; font-size: 13.5px; color: var(--dim); }
+.bubble .hl b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gold); margin-bottom: 3px; font-weight: 500; }
+.bubble ul { padding-left: 18px; margin: 6px 0; }
+.bubble li { margin-bottom: 4px; }
+
+.typing { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+.typing span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.1s infinite; }
+.typing span:nth-child(2){animation-delay:.18s} .typing span:nth-child(3){animation-delay:.36s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+
+/* INPUT */
+#inputbar { grid-area: inputbar; padding: 14px 24px 18px; background: var(--s1); border-top: 1px solid var(--border); }
+.input-row { display: flex; gap: 9px; align-items: flex-end; }
+#user-input {
+  flex: 1; background: var(--s2); border: 1px solid var(--border); border-radius: var(--r);
+  color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px;
+  font-weight: 300; padding: 11px 15px; resize: none; outline: none;
+  min-height: 44px; max-height: 130px; line-height: 1.6; transition: border-color 0.2s;
+}
+#user-input:focus { border-color: var(--gold2); }
+#user-input::placeholder { color: var(--muted); }
+#send-btn {
+  width: 44px; height: 44px; background: var(--gold); border: none; border-radius: var(--r);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.1s; flex-shrink: 0;
+}
+#send-btn:hover{background:#d9b95c} #send-btn:active{transform:scale(0.94)}
+#send-btn:disabled{background:var(--border);cursor:not-allowed}
+#send-btn svg{width:16px;height:16px}
+.hint{font-size:11px;color:var(--muted);margin-top:7px;text-align:center}
+
+/* MODAL */
+#mem-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:100; align-items:center; justify-content:center; }
+#mem-modal.open{display:flex}
+.modal-box { background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:22px; width:480px; max-width:90vw; }
+.modal-box h3 { font-family:'Lora',serif; font-size:15px; margin-bottom:6px; }
+.modal-box p { font-size:12px; color:var(--dim); margin-bottom:12px; line-height:1.6; }
+.modal-box textarea { width:100%; height:170px; background:var(--s2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:12px; padding:10px 12px; resize:none; outline:none; line-height:1.6; margin-bottom:12px; }
+.modal-box textarea:focus{border-color:var(--gold2)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.mbtn{padding:8px 16px;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;cursor:pointer;border:1px solid var(--border);transition:all 0.15s}
+.mbtn.primary{background:var(--gold);color:#111;border-color:var(--gold);font-weight:500}
+.mbtn.primary:hover{background:#d9b95c}
+.mbtn.sec{background:none;color:var(--dim)}
+.mbtn.sec:hover{color:var(--text)}
+
+/* EXAM MODAL */
+#exam-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:150; align-items:center; justify-content:center; padding:16px; }
+#exam-modal.open { display:flex; }
+.exam-box { background:var(--s1); border:1px solid var(--border); border-radius:16px; width:640px; max-width:100%; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; }
+.exam-header { padding:20px 22px 16px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; justify-content:space-between; flex-shrink:0; }
+.exam-header h3 { font-family:'Lora',serif; font-size:16px; color:var(--text); margin-bottom:3px; }
+.exam-header p { font-size:11px; color:var(--dim); }
+.exam-close { color:var(--muted); cursor:pointer; font-size:16px; padding:2px 5px; border-radius:4px; transition:color 0.15s; line-height:1; }
+.exam-close:hover { color:#c0614a; }
+
+#exam-config { padding:20px 22px; overflow-y:auto; }
+.exam-cfg-row { display:flex; gap:16px; margin-bottom:16px; }
+.exam-cfg-item { flex:1; }
+.exam-cfg-item label, .exam-cfg-topic label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:8px; }
+.exam-num-row { display:flex; align-items:center; gap:10px; }
+.exam-num-row button { width:28px; height:28px; background:var(--s2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.exam-num-row button:hover { border-color:var(--gold2); color:var(--gold); }
+.exam-num-row span { font-size:18px; font-weight:300; color:var(--text); min-width:24px; text-align:center; }
+.exam-diff-row { display:flex; gap:5px; }
+.diff-btn { background:var(--s2); border:1px solid var(--border); border-radius:6px; color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:11px; padding:5px 10px; cursor:pointer; transition:all 0.15s; }
+.diff-btn:hover { border-color:var(--gold2); color:var(--gold); }
+.diff-btn.active { background:rgba(200,168,75,0.12); border-color:var(--gold2); color:var(--gold); }
+.exam-cfg-topic { margin-bottom:18px; }
+.exam-cfg-topic input { width:100%; background:var(--s2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13px; padding:9px 13px; outline:none; transition:border-color 0.2s; }
+.exam-cfg-topic input:focus { border-color:var(--gold2); }
+.exam-cfg-topic input::placeholder { color:var(--muted); }
+.exam-start-btn { width:100%; background:var(--gold); border:none; border-radius:9px; color:#111; font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:500; padding:11px; cursor:pointer; transition:background 0.2s; }
+.exam-start-btn:hover { background:#d9b95c; }
+.exam-start-btn.secondary { background:var(--s2); border:1px solid var(--border); color:var(--dim); margin-top:8px; }
+.exam-start-btn.secondary:hover { border-color:var(--gold2); color:var(--gold); background:var(--s2); }
+
+#exam-questions { padding:16px 22px 20px; overflow-y:auto; flex:1; }
+#exam-progress-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:12px; color:var(--dim); }
+
+/* MULTIPLE CHOICE */
+.exam-q-block { animation:up 0.2s ease; }
+.exam-q-text { font-size:14px; line-height:1.7; color:var(--text); margin-bottom:14px; font-weight:400; }
+.exam-q-num { font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold); margin-bottom:6px; font-weight:500; }
+.mc-options { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
+.mc-opt { background:var(--s2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; cursor:pointer; font-size:13px; color:var(--dim); transition:all 0.15s; display:flex; align-items:flex-start; gap:10px; text-align:left; width:100%; font-family:'IBM Plex Sans',sans-serif; }
+.mc-opt:hover:not(:disabled) { border-color:var(--gold2); color:var(--text); }
+.mc-opt.selected { border-color:var(--gold2); color:var(--text); background:rgba(200,168,75,0.08); }
+.mc-opt.correct { border-color:var(--green); background:rgba(90,158,120,0.12); color:var(--text); }
+.mc-opt.wrong { border-color:#c0614a; background:rgba(192,97,74,0.1); color:var(--text); }
+.mc-opt:disabled { cursor:default; }
+.opt-letter { width:20px; height:20px; border-radius:50%; background:var(--s3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:500; flex-shrink:0; margin-top:1px; }
+.mc-opt.correct .opt-letter { background:rgba(90,158,120,0.3); border-color:var(--green); color:var(--green); }
+.mc-opt.wrong .opt-letter { background:rgba(192,97,74,0.2); border-color:#c0614a; color:#c0614a; }
+.mc-opt.selected .opt-letter { background:rgba(200,168,75,0.2); border-color:var(--gold); color:var(--gold); }
+
+/* OPEN QUESTIONS */
+.open-textarea { width:100%; background:var(--s2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:300; padding:11px 14px; resize:none; outline:none; line-height:1.7; min-height:90px; transition:border-color 0.2s; margin-bottom:10px; }
+.open-textarea:focus { border-color:var(--gold2); }
+.open-textarea::placeholder { color:var(--muted); }
+.check-answer-btn { background:var(--s2); border:1px solid var(--border); border-radius:7px; color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:12px; padding:7px 14px; cursor:pointer; transition:all 0.15s; margin-bottom:10px; }
+.check-answer-btn:hover { border-color:var(--gold2); color:var(--gold); }
+
+.feedback-box { border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.7; margin-bottom:10px; }
+.feedback-box.correct { background:rgba(90,158,120,0.1); border:1px solid rgba(90,158,120,0.3); }
+.feedback-box.wrong { background:rgba(192,97,74,0.08); border:1px solid rgba(192,97,74,0.25); }
+.feedback-box.neutral { background:rgba(200,168,75,0.07); border:1px solid var(--gold2); }
+.feedback-label { font-size:10px; text-transform:uppercase; letter-spacing:0.07em; font-weight:500; margin-bottom:5px; display:block; }
+.feedback-box.correct .feedback-label { color:var(--green); }
+.feedback-box.wrong .feedback-label { color:#c0614a; }
+.feedback-box.neutral .feedback-label { color:var(--gold); }
+.explain-btn { background:none; border:none; color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:2px; transition:color 0.15s; }
+.explain-btn:hover { color:var(--gold); }
+
+#exam-nav { display:flex; gap:8px; margin-top:12px; }
+.exam-nav-btn { flex:1; background:var(--s2); border:1px solid var(--border); border-radius:8px; color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:12px; padding:9px; cursor:pointer; transition:all 0.15s; }
+.exam-nav-btn:hover { border-color:var(--gold2); color:var(--gold); }
+.exam-nav-btn:disabled { opacity:0.3; cursor:default; }
+
+#exam-results { padding:30px 22px; text-align:center; }
+.exam-results-inner { max-width:320px; margin:0 auto; }
+#exam-results-score { font-size:48px; font-family:'Lora',serif; color:var(--gold); margin-bottom:8px; }
+#exam-results-msg { font-size:13px; color:var(--dim); margin-bottom:20px; line-height:1.6; }
+.exam-results-btns { display:flex; flex-direction:column; gap:0; }
+
+#exam-review { padding:16px 22px 20px; overflow-y:auto; flex:1; }
+.review-item { margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+.review-item:last-child { border-bottom:none; }
+.review-correct { color:var(--green); font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; }
+.review-wrong { color:#c0614a; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; }
+
+/* POMODORO */
+#pomodoro {
+  position:fixed; bottom:20px; right:20px; z-index:200;
+  background:var(--s1); border:1px solid var(--border); border-radius:12px;
+  padding:10px 13px; font-family:'IBM Plex Sans',sans-serif;
+  min-width:148px; cursor:default;
+  box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  user-select:none;
+}
+#pomodoro.hidden { display:none; }
+#pom-toggle-btn {
+  position:fixed; bottom:20px; right:20px; z-index:199;
+  background:var(--s1); border:1px solid var(--border); border-radius:10px;
+  color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:11px;
+  padding:6px 11px; cursor:pointer; display:none; transition:all 0.15s;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+#pom-toggle-btn:hover { border-color:var(--gold2); color:var(--gold); }
+#pom-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;
+  cursor:grab;
+}
+#pom-header:active { cursor:grabbing; }
+#pom-mode {
+  font-size:9px; text-transform:uppercase; letter-spacing:0.08em;
+  font-weight:500;
+}
+#pom-mode.work { color:var(--gold); }
+#pom-mode.rest { color:var(--green); }
+#pom-rounds { font-size:10px; color:var(--muted); }
+#pom-time {
+  font-size:22px; font-weight:300; color:var(--text);
+  letter-spacing:0.04em; text-align:center; margin-bottom:8px;
+  font-variant-numeric:tabular-nums;
+}
+#pom-bar-bg {
+  height:3px; background:var(--border); border-radius:2px; margin-bottom:8px;
+}
+#pom-bar { height:3px; border-radius:2px; background:var(--gold); transition:width 1s linear; width:100%; }
+#pom-bar.rest { background:var(--green); }
+#pom-controls { display:flex; gap:5px; align-items:center; justify-content:center; }
+.pom-btn {
+  background:var(--s2); border:1px solid var(--border); border-radius:6px;
+  color:var(--dim); font-size:11px; padding:4px 8px; cursor:pointer;
+  font-family:'IBM Plex Sans',sans-serif; transition:all 0.15s;
+}
+.pom-btn:hover { border-color:var(--gold2); color:var(--gold); }
+#pom-settings-row {
+  margin-top:8px; border-top:1px solid var(--border); padding-top:7px;
+  display:none; gap:6px;
+}
+#pom-settings-row.open { display:flex; }
+.pom-set { display:flex; flex-direction:column; gap:2px; flex:1; }
+.pom-set label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.pom-set input {
+  background:var(--s2); border:1px solid var(--border); border-radius:5px;
+  color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:12px;
+  padding:3px 6px; outline:none; width:100%; text-align:center;
+}
+.pom-set input:focus { border-color:var(--gold2); }
+
+/* POMODORO HISTORY */
+#pom-history-toggle {
+  width:100%; background:none; border:none; border-top:1px solid var(--border);
+  color:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-size:10px;
+  text-transform:uppercase; letter-spacing:0.07em; padding:7px 0 2px;
+  cursor:pointer; text-align:center; margin-top:8px; transition:color 0.15s;
+}
+#pom-history-toggle:hover { color:var(--dim); }
+#pom-history-panel { display:none; margin-top:6px; max-height:160px; overflow-y:auto; }
+#pom-history-panel.open { display:block; }
+#pom-history-panel::-webkit-scrollbar { width:2px; }
+#pom-history-panel::-webkit-scrollbar-thumb { background:var(--border); }
+.pom-hist-item {
+  display:flex; align-items:flex-start; gap:7px;
+  padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.04);
+  font-size:11px; line-height:1.4;
+}
+.pom-hist-item:last-child { border-bottom:none; }
+.pom-hist-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.pom-hist-dot.complete { background:#5a9e78; }
+.pom-hist-dot.paused { background:#c9a84b; }
+.pom-hist-dot.incomplete { background:#c0614a; }
+.pom-hist-text { color:var(--dim); flex:1; }
+.pom-hist-text strong { display:block; font-weight:400; color:var(--text); font-size:10.5px; }
+.pom-hist-empty { font-size:11px; color:var(--muted); text-align:center; padding:8px 0; }
+
+/* MIC BUTTON */
+#mic-btn {
+  width:44px; height:44px; background:var(--s2); border:1px solid var(--border);
+  border-radius:var(--r); cursor:pointer; display:flex; align-items:center;
+  justify-content:center; flex-shrink:0; transition:all 0.2s;
+}
+#mic-btn:hover { border-color:var(--gold2); }
+#mic-btn.listening { background:rgba(192,97,74,0.15); border-color:#c0614a; animation:mic-pulse 1s infinite; }
+@keyframes mic-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(192,97,74,0.3)} 50%{box-shadow:0 0 0 5px rgba(192,97,74,0)} }
+#mic-btn svg { width:16px; height:16px; }
+#lang-toggle {
+  background:var(--s2); border:1px solid var(--border); border-radius:6px;
+  color:var(--dim); font-family:'IBM Plex Sans',sans-serif; font-size:11px;
+  padding:0 8px; height:44px; cursor:pointer; transition:all 0.15s; flex-shrink:0;
+}
+#lang-toggle:hover { border-color:var(--gold2); color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD SCREEN -->
+<div id="lock-screen" style="
+  position:fixed;inset:0;background:#111210;
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;font-family:'IBM Plex Sans',sans-serif;
+">
+  <div style="text-align:center;width:300px;">
+    <div style="font-size:11px;color:#8c8880;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:28px;">Acceso privado</div>
+    <input id="pwd-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkPwd()" style="
+      width:100%;background:#1b1c19;border:1px solid #333530;border-radius:10px;
+      color:#e2ddd4;font-family:'IBM Plex Sans',sans-serif;font-size:14px;
+      padding:12px 16px;outline:none;margin-bottom:10px;text-align:center;
+    ">
+    <div id="pwd-error" style="font-size:12px;color:#c0614a;margin-bottom:10px;min-height:18px;"></div>
+    <button onclick="checkPwd()" style="
+      width:100%;background:#c8a84b;border:none;border-radius:10px;
+      color:#111;font-family:'IBM Plex Sans',sans-serif;font-size:14px;
+      font-weight:500;padding:12px;cursor:pointer;
+    ">Entrar</button>
+  </div>
+</div>
+
+<script>
+function checkPwd() {
+  const val = document.getElementById('pwd-input').value;
+  if (val === 'Vaca') {
+    document.getElementById('lock-screen').style.display = 'none';
+  } else {
+    document.getElementById('pwd-error').textContent = 'Contraseña incorrecta';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+document.getElementById('pwd-input') && document.getElementById('pwd-input').focus();
+</script>
+
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="prof-tag">
+      <div class="prof-avatar">D</div>
+      <div class="prof-name">Profesor IA<small>Finanzas Corp. · Valencia</small></div>
+    </div>
+    <div class="status-row"><div class="dot"></div>Listo para estudiar</div>
+  </div>
+
+  <div class="sb-section">
+    <span class="sb-label">Tus apuntes y temas (PDF)</span>
+    <div id="pdf-drop" onclick="document.getElementById('pdf-input').click()"
+         ondragover="e=>{e.preventDefault();this.classList.add('drag')}"
+         ondragleave="e=>{this.classList.remove('drag')}"
+         ondrop="handleDrop(event)">
+      <span class="icon">📄</span>
+      <p>Arrastra PDFs aquí<br>o haz clic para seleccionar</p>
+    </div>
+    <input type="file" id="pdf-input" accept=".pdf" multiple onchange="handleFiles(this.files)">
+    <div id="pdf-list"></div>
+  </div>
+
+  <div class="sb-section">
+    <span class="sb-label">Acciones rápidas</span>
+    <div class="qa-list">
+      <button class="qa-btn" onclick="quickAction('resumen')">📋 Resúmeme el tema cargado</button>
+      <button class="qa-btn" onclick="openExamModal('multiple')">🔤 Preguntas opción múltiple</button>
+      <button class="qa-btn" onclick="openExamModal('abiertas')">✍️ Preguntas abiertas</button>
+      <button class="qa-btn" onclick="quickAction('terminos')">📖 Explícame los términos clave</button>
+      <button class="qa-btn" onclick="quickAction('dificil')">🔍 ¿Cuál es lo más difícil?</button>
+      <button class="qa-btn" onclick="quickAction('analogia')">💡 Explica todo con analogías</button>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <span class="sb-label">Memoria entre sesiones</span>
+    <div class="mem-actions">
+      <button class="mem-btn" onclick="exportMemory()">💾 Exportar sesión</button>
+      <button class="mem-btn" onclick="openMemModal()">📥 Cargar sesión</button>
+    </div>
+  </div>
+</aside>
+
+<header>
+  <div class="chat-title">
+    Sesión de estudio
+    <small id="chat-subtitle">Sin PDF cargado · Pregunta lo que quieras</small>
+  </div>
+  <button class="clear-btn" onclick="clearChat()">Nueva sesión</button>
+</header>
+
+<div id="chat"></div>
+
+<div id="inputbar">
+  <div class="input-row">
+    <button id="lang-toggle" onclick="toggleLang()" title="Idioma del micrófono">ES</button>
+    <button id="mic-btn" onclick="toggleMic()" title="Dictado por voz">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="#8c8880">
+        <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+        <path d="M5 10a7 7 0 0 0 14 0"></path>
+        <line x1="12" y1="19" x2="12" y2="22"></line>
+        <line x1="8" y1="22" x2="16" y2="22"></line>
+      </svg>
+    </button>
+    <textarea id="user-input" placeholder="Escribe tu pregunta... Cualquier palabra que no entiendas, pregúntamela." rows="1"></textarea>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+  <div class="hint">Enter para enviar · Shift+Enter para nueva línea</div>
+</div>
+
+<!-- POMODORO -->
+<div id="pomodoro">
+  <div id="pom-header">
+    <span id="pom-mode" class="work">Trabajo</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="pom-rounds">Ronda 1</span>
+      <span onclick="closePom()" title="Cerrar" style="color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:1px 3px;border-radius:4px;transition:color 0.15s;" onmouseover="this.style.color='#c0614a'" onmouseout="this.style.color='var(--muted)'">✕</span>
+    </div>
+  </div>
+  <div id="pom-time">60:00</div>
+  <div id="pom-bar-bg"><div id="pom-bar"></div></div>
+  <div id="pom-controls">
+    <button class="pom-btn" onclick="pomToggle()">▶ Inicio</button>
+    <button class="pom-btn" onclick="pomReset()">↺</button>
+    <button class="pom-btn" onclick="togglePomSettings()">⚙</button>
+  </div>
+  <div id="pom-settings-row">
+    <div class="pom-set">
+      <label>Trabajo (min)</label>
+      <input type="number" id="pom-work-input" value="60" min="1" max="120" onchange="applyPomSettings()">
+    </div>
+    <div class="pom-set">
+      <label>Descanso (min)</label>
+      <input type="number" id="pom-rest-input" value="10" min="1" max="60" onchange="applyPomSettings()">
+    </div>
+  </div>
+  <button id="pom-history-toggle" onclick="togglePomHistory()">▾ Historial</button>
+  <div id="pom-history-panel">
+    <div class="pom-hist-empty" id="pom-hist-empty">Sin rondas registradas aún</div>
+  </div>
+</div>
+<button id="pom-toggle-btn" onclick="openPom()">⏱ Pomodoro</button>
+
+<!-- EXAM MODAL -->
+<div id="exam-modal">
+  <div class="exam-box">
+    <div class="exam-header">
+      <div>
+        <h3 id="exam-title">Preguntas de examen</h3>
+        <p id="exam-subtitle">Configura tu sesión de práctica</p>
+      </div>
+      <span class="exam-close" onclick="closeExamModal()">✕</span>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="exam-config">
+      <div class="exam-cfg-row">
+        <div class="exam-cfg-item">
+          <label>Número de preguntas</label>
+          <div class="exam-num-row">
+            <button onclick="adjustNum(-1)">−</button>
+            <span id="exam-num">5</span>
+            <button onclick="adjustNum(1)">+</button>
+          </div>
+        </div>
+        <div class="exam-cfg-item">
+          <label>Dificultad</label>
+          <div class="exam-diff-row">
+            <button class="diff-btn active" onclick="setDiff(this,'básica')">Básica</button>
+            <button class="diff-btn" onclick="setDiff(this,'media')">Media</button>
+            <button class="diff-btn" onclick="setDiff(this,'avanzada')">Avanzada</button>
+          </div>
+        </div>
+      </div>
+      <div class="exam-cfg-topic">
+        <label>Tema específico <span style="color:var(--muted)">(opcional — si dejas vacío usa el PDF)</span></label>
+        <input type="text" id="exam-topic" placeholder="Ej: WACC, valoración, estructura de capital...">
+      </div>
+      <button class="exam-start-btn" onclick="startExam()">Generar preguntas</button>
+    </div>
+
+    <!-- QUESTIONS -->
+    <div id="exam-questions" style="display:none">
+      <div id="exam-progress-row">
+        <span id="exam-progress-label"></span>
+        <span id="exam-score-label" style="color:var(--gold)"></span>
+      </div>
+      <div id="exam-q-container"></div>
+      <div id="exam-nav">
+        <button class="exam-nav-btn" id="exam-prev-btn" onclick="examNav(-1)">← Anterior</button>
+        <button class="exam-nav-btn" id="exam-next-btn" onclick="examNav(1)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="exam-results" style="display:none">
+      <div class="exam-results-inner">
+        <div id="exam-results-score"></div>
+        <p id="exam-results-msg"></p>
+        <div class="exam-results-btns">
+          <button class="exam-start-btn" onclick="reviewExam()">Ver correcciones completas</button>
+          <button class="exam-start-btn secondary" onclick="resetExam()">Nuevo examen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEW -->
+    <div id="exam-review" style="display:none">
+      <div id="exam-review-content"></div>
+      <button class="exam-start-btn" style="margin-top:16px" onclick="resetExam()">Nuevo examen</button>
+    </div>
+  </div>
+</div>
+
+<div id="mem-modal">
+  <div class="modal-box">
+    <h3>Cargar sesión anterior</h3>
+    <p>Pega aquí el texto que exportaste al final de tu última sesión. El profesor leerá todo y no tendrás que repetirle nada.</p>
+    <textarea id="mem-input" placeholder="Pega aquí tu memoria exportada..."></textarea>
+    <div class="modal-actions">
+      <button class="mbtn sec" onclick="closeMemModal()">Cancelar</button>
+      <button class="mbtn primary" onclick="loadMemory()">Cargar y continuar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const GROQ_API_KEY = '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';
+
+let history = [];
+let pdfTexts = {};
+let isLoading = false;
+let sessionMemory = '';
+
+const SYSTEM = `Eres un profesor experto en finanzas corporativas del máster de la Universidad de Valencia. Tu alumno tiene dislexia y tiene una forma específica de aprender que DEBES respetar siempre, sin excepción.
+
+PERFIL DEL ALUMNO:
+- Tiene dislexia. Esto significa: necesita que cada término técnico o palabra desconocida sea definida en el MISMO momento en que aparece. Nunca uses una palabra técnica sin explicarla justo después.
+- Aprende mejor con este orden: (1) analogía simple de la vida diaria → (2) concepto técnico → (3) ejemplo real de empresa conocida (Apple, Inditex, BBVA, Amazon, Mercadona, etc.).
+- Necesita párrafos MUY cortos. Máximo 3-4 líneas seguidas. Deja espacio visual entre ideas.
+- Nivel: tiene algunas bases de finanzas, no es principiante total pero tampoco avanzado.
+- Corrección: directa pero siempre explicando exactamente el porqué del error y cuál es la diferencia.
+
+REGLAS OBLIGATORIAS (aplica SIEMPRE):
+1. Cada término técnico nuevo → defínelo inmediatamente: "→ esto significa: [definición simple]"
+2. Analogía SIEMPRE antes que la teoría. Sin excepción.
+3. Después de la analogía: ejemplo real de empresa.
+4. Párrafos cortos. Nunca bloques de texto denso.
+5. Al final de cada explicación importante, pregunta: "¿Hay alguna parte o palabra que no quedó del todo clara?"
+6. Si el alumno se equivoca: díselo directo + explica por qué está mal + da la respuesta correcta.
+7. Si hay PDF cargado: úsalo como base, menciona de qué parte del tema vienes explicando.
+8. Explica siempre a fondo. Nunca respuestas cortas para conceptos nuevos.
+9. Si el alumno lleva rato con el mismo concepto sin entenderlo, ofrece explicarlo de otra forma.
+10. El idioma es SIEMPRE español. Nunca uses inglés sin traducir.
+
+SOBRE LA MEMORIA:
+Si recibes un bloque "MEMORIA DE SESIONES ANTERIORES", léelo entero. El alumno no tiene que repetirte nada de lo que ya estudiaron juntos.`;
+
+// PDF
+async function handleFiles(files) {
+  for (const f of Array.from(files)) {
+    if (f.type === 'application/pdf') await extractPDF(f);
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('pdf-drop').classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+}
+
+async function extractPDF(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(s => s.str).join(' ') + '\n';
+      }
+      pdfTexts[file.name] = text.slice(0, 20000);
+      renderPDFList();
+      updateSubtitle();
+      addMsg('assistant', `He leído <strong>${file.name}</strong> (${pdf.numPages} páginas). Ya tengo todo el contenido. ¿Quieres que empiece con un resumen, con los términos clave, o tienes alguna pregunta directa?`, true);
+    } catch(err) {
+      addMsg('assistant', `No pude leer ${file.name}. Asegúrate de que el PDF no esté protegido con contraseña e intenta de nuevo.`, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderPDFList() {
+  const list = document.getElementById('pdf-list');
+  list.innerHTML = '';
+  Object.keys(pdfTexts).forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'pdf-item';
+    item.innerHTML = `<span class="pi">📄</span><span class="pn" title="${name}">${name}</span><span class="pr" onclick="removePDF('${name}')">✕</span>`;
+    list.appendChild(item);
+  });
+}
+
+function removePDF(name) {
+  delete pdfTexts[name];
+  renderPDFList();
+  updateSubtitle();
+}
+
+function updateSubtitle() {
+  const names = Object.keys(pdfTexts);
+  const sub = document.getElementById('chat-subtitle');
+  if (names.length === 0) sub.textContent = 'Sin PDF cargado · Pregunta lo que quieras';
+  else if (names.length === 1) sub.textContent = names[0];
+  else sub.textContent = `${names.length} PDFs cargados`;
+}
+
+// CHAT
+function addMsg(role, content, isHTML, msgIndex) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (msgIndex !== undefined) div.dataset.index = msgIndex;
+
+  const av = document.createElement('div');
+  av.className = 'msg-av';
+  av.textContent = role === 'assistant' ? 'D' : 'Tú';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (isHTML) bub.innerHTML = content;
+  else bub.textContent = content;
+
+  div.appendChild(av);
+  div.appendChild(bub);
+
+  // Edit button for user messages
+  if (role === 'user' && msgIndex !== undefined) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'msg-edit-btn';
+    editBtn.title = 'Editar y reenviar desde aquí';
+    editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+    editBtn.onclick = () => startEdit(msgIndex, content);
+    div.appendChild(editBtn);
+  }
+
+  chat.appendChild(div);
+  if (role === 'user') chat.scrollTop = chat.scrollHeight;
+}
+
+function startEdit(msgIndex, originalText) {
+  const input = document.getElementById('user-input');
+  input.value = originalText;
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 130) + 'px';
+  input.focus();
+
+  // Store which index we're editing from
+  input.dataset.editFrom = msgIndex;
+
+  // Visual indicator
+  input.style.borderColor = 'var(--gold2)';
+  input.placeholder = 'Editando — pulsa Enter para reenviar desde aquí...';
+}
+
+function applyEdit(editFromIndex, newText) {
+  // Trim history to before this message
+  history = history.slice(0, editFromIndex);
+
+  // Remove all DOM messages from that index onward
+  const chat = document.getElementById('chat');
+  Array.from(chat.querySelectorAll('.msg[data-index]')).forEach(el => {
+    if (parseInt(el.dataset.index) >= editFromIndex) el.remove();
+  });
+
+  // Reset edit state
+  const input = document.getElementById('user-input');
+  delete input.dataset.editFrom;
+  input.style.borderColor = '';
+  input.placeholder = 'Escribe tu pregunta... Cualquier palabra que no entiendas, pregúntamela.';
+}
+
+function addTyping() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = 'typing';
+  div.innerHTML = `<div class="msg-av">D</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function fmt(text) {
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  text = text.replace(/\n\n/g, '<br><br>');
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+
+function buildSystem() {
+  let sys = SYSTEM;
+  if (sessionMemory) sys += `\n\n--- MEMORIA DE SESIONES ANTERIORES ---\n${sessionMemory}\n--- FIN ---`;
+  const names = Object.keys(pdfTexts);
+  if (names.length > 0) {
+    sys += `\n\n--- CONTENIDO DE LOS PDFs ---\n`;
+    names.forEach(n => { sys += `\n[${n}]\n${pdfTexts[n]}\n`; });
+    sys += `--- FIN PDFs ---`;
+  }
+  return sys;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  // Handle edit mode
+  const editFrom = input.dataset.editFrom;
+  if (editFrom !== undefined) {
+    applyEdit(parseInt(editFrom), text);
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+
+  const msgIndex = history.length;
+  addMsg('user', text, false, msgIndex);
+  history.push({ role: 'user', content: text });
+  addTyping();
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 5000,
+        messages: [{ role: 'system', content: buildSystem() }, ...history]
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'Hubo un error. Intenta de nuevo.';
+    removeTyping();
+    history.push({ role: 'assistant', content: reply });
+    addMsg('assistant', fmt(reply), true, history.length - 1);
+  } catch(err) {
+    removeTyping();
+    addMsg('assistant', 'Error de conexión. Intenta de nuevo.', false);
+  }
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+  input.focus();
+}
+
+function quickAction(type) {
+  const hasPDF = Object.keys(pdfTexts).length > 0;
+  const msgs = {
+    resumen: hasPDF ? 'Por favor hazme un resumen completo del tema que he subido. Usa párrafos cortos y define cada término técnico que aparezca.' : '¿Sobre qué tema quieres el resumen? No has cargado ningún PDF todavía.',
+    examen: hasPDF ? 'Hazme 5 preguntas de examen sobre el tema subido. Empieza con las más básicas y ve subiendo la dificultad.' : '¿Sobre qué tema quieres las preguntas de examen? No hay PDF cargado.',
+    terminos: hasPDF ? 'Lista todos los términos técnicos importantes del tema y explícame cada uno con una analogía simple de la vida cotidiana.' : '¿De qué tema quieres los términos clave?',
+    dificil: hasPDF ? '¿Cuál es el concepto más difícil del tema que he subido? Explícamelo desde cero con analogías y un ejemplo real.' : '¿Qué concepto quieres que te explique desde cero?',
+    analogia: hasPDF ? 'Explícame todo el tema del PDF usando analogías de la vida cotidiana. Cada concepto técnico debe tener su analogía antes de la explicación.' : '¿Qué quieres que explique con analogías?'
+  };
+  document.getElementById('user-input').value = msgs[type];
+  sendMessage();
+}
+
+// EXAM MODULE
+let examType = 'multiple';
+let examNumQ = 5;
+let examDiff = 'básica';
+let examQuestions = [];
+let examCurrent = 0;
+let examAnswers = [];
+let examFeedbacks = [];
+
+function openExamModal(type) {
+  examType = type;
+  document.getElementById('exam-title').textContent = type === 'multiple' ? 'Opción múltiple' : 'Preguntas abiertas';
+  document.getElementById('exam-subtitle').textContent = type === 'multiple'
+    ? '4 opciones por pregunta · respuesta inmediata'
+    : 'Responde con tus palabras · corrección con explicación';
+  document.getElementById('exam-config').style.display = 'block';
+  document.getElementById('exam-questions').style.display = 'none';
+  document.getElementById('exam-results').style.display = 'none';
+  document.getElementById('exam-review').style.display = 'none';
+  document.getElementById('exam-modal').classList.add('open');
+}
+
+function closeExamModal() { document.getElementById('exam-modal').classList.remove('open'); }
+
+function adjustNum(d) {
+  examNumQ = Math.min(10, Math.max(1, examNumQ + d));
+  document.getElementById('exam-num').textContent = examNumQ;
+}
+
+function setDiff(btn, diff) {
+  examDiff = diff;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function startExam() {
+  const topic = document.getElementById('exam-topic').value.trim();
+  const hasPDF = Object.keys(pdfTexts).length > 0;
+  const topicStr = topic || (hasPDF ? 'el tema del PDF cargado' : 'finanzas corporativas del máster de la Universidad de Valencia');
+
+  document.getElementById('exam-config').style.display = 'none';
+  document.getElementById('exam-questions').style.display = 'block';
+  document.getElementById('exam-q-container').innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--dim);font-size:13px;">Generando preguntas<span style="animation:bounce 1s infinite">...</span></div>`;
+  document.getElementById('exam-progress-label').textContent = '';
+  document.getElementById('exam-score-label').textContent = '';
+
+  const typePrompt = examType === 'multiple'
+    ? `Genera exactamente ${examNumQ} preguntas de opción múltiple de dificultad ${examDiff} sobre ${topicStr}.
+Responde SOLO con JSON válido, sin texto adicional, sin bloques de código, sin backticks. Formato exacto:
+{"questions":[{"question":"texto","options":["A) texto","B) texto","C) texto","D) texto"],"correct":0,"explanation":"explicación breve de por qué es correcta y por qué las otras están mal"}]}`
+    : `Genera exactamente ${examNumQ} preguntas abiertas de dificultad ${examDiff} sobre ${topicStr}.
+Responde SOLO con JSON válido, sin texto adicional, sin bloques de código, sin backticks. Formato exacto:
+{"questions":[{"question":"texto de la pregunta","model_answer":"respuesta modelo completa y clara","key_points":["punto clave 1","punto clave 2","punto clave 3"]}]}`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 5000,
+        messages: [{ role: 'system', content: buildSystem() }, { role: 'user', content: typePrompt }]
+      })
+    });
+    const data = await res.json();
+    let raw = data.choices?.[0]?.message?.content || '';
+    raw = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+    examQuestions = parsed.questions;
+    examAnswers = new Array(examQuestions.length).fill(null);
+    examFeedbacks = new Array(examQuestions.length).fill(null);
+    examCurrent = 0;
+    renderExamQuestion();
+  } catch(err) {
+    document.getElementById('exam-q-container').innerHTML = `<div style="color:#c0614a;font-size:13px;padding:20px 0">Error generando preguntas. Intenta de nuevo.</div>`;
+  }
+}
+
+function renderExamQuestion() {
+  const q = examQuestions[examCurrent];
+  const total = examQuestions.length;
+  document.getElementById('exam-progress-label').textContent = `Pregunta ${examCurrent + 1} de ${total}`;
+  const answered = examAnswers.filter(a => a !== null).length;
+  document.getElementById('exam-score-label').textContent = answered > 0 ? `${answered} respondidas` : '';
+  document.getElementById('exam-prev-btn').disabled = examCurrent === 0;
+  document.getElementById('exam-next-btn').textContent = examCurrent === total - 1 ? 'Ver resultados →' : 'Siguiente →';
+
+  const container = document.getElementById('exam-q-container');
+
+  if (examType === 'multiple') {
+    const answered = examAnswers[examCurrent];
+    const letters = ['A','B','C','D'];
+    container.innerHTML = `
+      <div class="exam-q-block">
+        <div class="exam-q-num">Pregunta ${examCurrent + 1}</div>
+        <div class="exam-q-text">${q.question}</div>
+        <div class="mc-options">
+          ${q.options.map((opt, i) => {
+            let cls = 'mc-opt';
+            if (answered !== null) {
+              if (i === q.correct) cls += ' correct';
+              else if (i === answered && i !== q.correct) cls += ' wrong';
+            } else if (i === answered) cls += ' selected';
+            return `<button class="${cls}" onclick="selectMC(${i})" ${answered !== null ? 'disabled' : ''}>
+              <span class="opt-letter">${letters[i]}</span>
+              <span>${opt.replace(/^[A-D]\)\s*/,'')}</span>
+            </button>`;
+          }).join('')}
+        </div>
+        ${answered !== null ? `
+          <div class="feedback-box ${answered === q.correct ? 'correct' : 'wrong'}">
+            <span class="feedback-label">${answered === q.correct ? '✓ Correcto' : '✗ Incorrecto'}</span>
+            ${q.explanation}
+          </div>` : ''}
+      </div>`;
+  } else {
+    const fb = examFeedbacks[examCurrent];
+    container.innerHTML = `
+      <div class="exam-q-block">
+        <div class="exam-q-num">Pregunta ${examCurrent + 1}</div>
+        <div class="exam-q-text">${q.question}</div>
+        <textarea class="open-textarea" id="open-ans-${examCurrent}" placeholder="Escribe tu respuesta aquí..." ${fb ? 'disabled' : ''}>${examAnswers[examCurrent] || ''}</textarea>
+        ${!fb ? `<button class="check-answer-btn" onclick="checkOpenAnswer(${examCurrent})">Corregir mi respuesta</button>` : ''}
+        ${fb ? `
+          <div class="feedback-box ${fb.type}">
+            <span class="feedback-label">${fb.label}</span>
+            <div style="margin-bottom:8px">${fb.feedback}</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+              <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);display:block;margin-bottom:4px">Respuesta modelo</span>
+              ${q.model_answer}
+            </div>
+          </div>
+          <button class="explain-btn" onclick="askExplanation(${examCurrent})">Pedir explicación más detallada al profesor →</button>
+        ` : ''}
+      </div>`;
+  }
+}
+
+function selectMC(optIdx) {
+  if (examAnswers[examCurrent] !== null) return;
+  examAnswers[examCurrent] = optIdx;
+  renderExamQuestion();
+}
+
+async function checkOpenAnswer(idx) {
+  const ta = document.getElementById(`open-ans-${idx}`);
+  const userAns = ta ? ta.value.trim() : '';
+  if (!userAns) { ta.style.borderColor = '#c0614a'; setTimeout(() => ta.style.borderColor = '', 1000); return; }
+  examAnswers[idx] = userAns;
+  ta.disabled = true;
+
+  const q = examQuestions[idx];
+  const prompt = `El alumno respondió a esta pregunta de examen:
+Pregunta: "${q.question}"
+Respuesta del alumno: "${userAns}"
+Respuesta modelo: "${q.model_answer}"
+Puntos clave esperados: ${q.key_points.join(', ')}
+
+Evalúa brevemente (3-4 líneas máximo). Indica si la respuesta es correcta, parcialmente correcta o incorrecta. Señala qué falta o qué está bien. Sé directo pero explica el porqué. Responde en español.`;
+
+  document.getElementById('exam-q-container').querySelector('.check-answer-btn') && 
+    (document.getElementById('exam-q-container').querySelector('.check-answer-btn').textContent = 'Corrigiendo...');
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 5000,
+        messages: [{ role: 'system', content: buildSystem() }, { role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '';
+    const isGood = /correcto|bien|acertad|completo/i.test(reply) && !/incorrecto|mal|falt|parcial/i.test(reply);
+    const isPartial = /parcial|incompleto|falt/i.test(reply);
+    examFeedbacks[idx] = {
+      type: isGood ? 'correct' : isPartial ? 'neutral' : 'wrong',
+      label: isGood ? '✓ Correcto' : isPartial ? '~ Parcialmente correcto' : '✗ Incompleto o incorrecto',
+      feedback: fmt(reply)
+    };
+    renderExamQuestion();
+  } catch(e) {
+    examFeedbacks[idx] = { type:'neutral', label:'Corrección', feedback:'Error al corregir. Revisa la respuesta modelo.' };
+    renderExamQuestion();
+  }
+}
+
+function askExplanation(idx) {
+  const q = examQuestions[idx];
+  closeExamModal();
+  document.getElementById('user-input').value = `Sobre la pregunta de examen "${q.question}" — dame una explicación más detallada del concepto y por qué la respuesta correcta es: ${q.model_answer}`;
+  sendMessage();
+}
+
+function examNav(dir) {
+  const newIdx = examCurrent + dir;
+  if (newIdx >= examQuestions.length) {
+    showExamResults();
+    return;
+  }
+  examCurrent = Math.max(0, newIdx);
+  renderExamQuestion();
+}
+
+function showExamResults() {
+  document.getElementById('exam-questions').style.display = 'none';
+  document.getElementById('exam-results').style.display = 'block';
+
+  let correct = 0;
+  if (examType === 'multiple') {
+    examAnswers.forEach((a, i) => { if (a === examQuestions[i].correct) correct++; });
+  } else {
+    correct = examFeedbacks.filter(f => f && f.type === 'correct').length;
+  }
+  const total = examQuestions.length;
+  const pct = Math.round((correct / total) * 100);
+  document.getElementById('exam-results-score').textContent = `${pct}%`;
+  document.getElementById('exam-results-msg').textContent =
+    pct >= 80 ? `${correct} de ${total} correctas. ¡Muy bien! Tienes el tema dominado.`
+    : pct >= 50 ? `${correct} de ${total} correctas. Bien, pero hay puntos a repasar.`
+    : `${correct} de ${total} correctas. Hay conceptos que necesitan refuerzo. Revisa las correcciones.`;
+}
+
+function reviewExam() {
+  document.getElementById('exam-results').style.display = 'none';
+  document.getElementById('exam-review').style.display = 'block';
+  const container = document.getElementById('exam-review-content');
+  container.innerHTML = examQuestions.map((q, i) => {
+    const ans = examAnswers[i];
+    const fb = examFeedbacks[i];
+    let statusHtml = '';
+    if (examType === 'multiple') {
+      const isCorrect = ans === q.correct;
+      statusHtml = `<div class="${isCorrect ? 'review-correct' : 'review-wrong'}">${isCorrect ? '✓ Correcta' : '✗ Incorrecta'}</div>
+        <div style="font-size:12px;color:var(--dim);margin:4px 0">Tu respuesta: ${ans !== null ? q.options[ans] : 'Sin responder'}</div>
+        <div style="font-size:12px;color:var(--green);margin-bottom:6px">Correcta: ${q.options[q.correct]}</div>
+        <div style="font-size:13px;color:var(--dim);line-height:1.6">${q.explanation}</div>`;
+    } else {
+      statusHtml = `
+        ${fb ? `<div class="${fb.type === 'correct' ? 'review-correct' : fb.type === 'neutral' ? '' : 'review-wrong'}" style="color:${fb.type==='neutral'?'var(--gold)':''}">${fb.label}</div>` : ''}
+        <div style="font-size:12px;color:var(--dim);margin:6px 0;line-height:1.6"><em>Tu respuesta:</em> ${ans || 'Sin responder'}</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.6"><em style="color:var(--dim)">Respuesta modelo:</em> ${q.model_answer}</div>`;
+    }
+    return `<div class="review-item">
+      <div class="exam-q-num">Pregunta ${i+1}</div>
+      <div class="exam-q-text">${q.question}</div>
+      ${statusHtml}
+    </div>`;
+  }).join('');
+}
+
+function resetExam() {
+  examQuestions = []; examAnswers = []; examFeedbacks = []; examCurrent = 0;
+  document.getElementById('exam-config').style.display = 'block';
+  document.getElementById('exam-questions').style.display = 'none';
+  document.getElementById('exam-results').style.display = 'none';
+  document.getElementById('exam-review').style.display = 'none';
+  document.getElementById('exam-topic').value = '';
+}
+
+// MEMORIA
+function exportMemory() {
+  if (history.length === 0) { alert('No hay nada en esta sesión para exportar todavía.'); return; }
+  const topics = history.filter(m => m.role === 'user').map(m => '- ' + m.content.slice(0, 100)).join('\n');
+  const last = [...history].reverse().find(m => m.role === 'assistant');
+  const mem = `=== MEMORIA DE SESIÓN ===
+Fecha: ${new Date().toLocaleDateString('es-ES')}
+PDFs estudiados: ${Object.keys(pdfTexts).join(', ') || 'ninguno'}
+
+PREGUNTAS Y TEMAS DE ESTA SESIÓN:
+${topics}
+
+ÚLTIMO PUNTO EXPLICADO:
+${last ? last.content.slice(0, 500) : ''}
+
+NOTAS ADICIONALES (edita esto si quieres):
+[Escribe aquí algo que quieras que el profesor recuerde la próxima vez]
+=== FIN ===`;
+  const blob = new Blob([mem], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sesion_finanzas_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+function openMemModal() { document.getElementById('mem-modal').classList.add('open'); }
+function closeMemModal() { document.getElementById('mem-modal').classList.remove('open'); }
+
+function loadMemory() {
+  const txt = document.getElementById('mem-input').value.trim();
+  if (!txt) return;
+  sessionMemory = txt;
+  closeMemModal();
+  document.getElementById('mem-input').value = '';
+  addMsg('assistant', 'He leído tu sesión anterior. Ya tengo todo en mente y no necesitas repetirme nada. ¿Continuamos donde lo dejamos o quieres repasar algo?', true);
+}
+
+function clearChat() {
+  if (!confirm('¿Empezar sesión nueva? Se borrará el historial actual.')) return;
+  history = [];
+  document.getElementById('chat').innerHTML = '';
+  welcome();
+}
+
+// POMODORO
+let pomWorkMins = 60, pomRestMins = 10;
+let pomSecsLeft = pomWorkMins * 60;
+let pomTotalSecs = pomWorkMins * 60;
+let pomRunning = false;
+let pomInterval = null;
+let pomIsWork = true;
+let pomRound = 1;
+let pomHistory = [];       // { time, label, status: 'complete'|'paused'|'incomplete' }
+let pomHadPause = false;   // tracks if current round had a pause
+let pomPauseCount = 0;     // counts pauses in current round
+
+// Drag
+(function() {
+  const el = document.getElementById('pomodoro');
+  const handle = document.getElementById('pom-header');
+  let dragging = false, ox = 0, oy = 0;
+  handle.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'SPAN' && e.target.getAttribute('onclick')) return;
+    dragging = true;
+    ox = e.clientX - el.getBoundingClientRect().left;
+    oy = e.clientY - el.getBoundingClientRect().top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const x = Math.min(Math.max(0, e.clientX - ox), window.innerWidth - el.offsetWidth);
+    const y = Math.min(Math.max(0, e.clientY - oy), window.innerHeight - el.offsetHeight);
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.right = 'auto'; el.style.bottom = 'auto';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+})();
+
+function closePom() {
+  const el = document.getElementById('pomodoro');
+  const btn = document.getElementById('pom-toggle-btn');
+  el.classList.add('hidden');
+  // position toggle button where pomodoro was
+  const r = el.getBoundingClientRect();
+  btn.style.left = r.left + 'px'; btn.style.top = r.top + 'px';
+  btn.style.right = 'auto'; btn.style.bottom = 'auto';
+  btn.style.display = 'block';
+}
+
+function openPom() {
+  const el = document.getElementById('pomodoro');
+  const btn = document.getElementById('pom-toggle-btn');
+  const r = btn.getBoundingClientRect();
+  el.style.left = r.left + 'px'; el.style.top = r.top + 'px';
+  el.style.right = 'auto'; el.style.bottom = 'auto';
+  el.classList.remove('hidden');
+  btn.style.display = 'none';
+}
+
+function pomToggle() {
+  pomRunning = !pomRunning;
+  const btn = document.querySelector('#pom-controls .pom-btn');
+  btn.textContent = pomRunning ? '⏸ Pausa' : '▶ Continuar';
+  if (pomRunning) {
+    pomInterval = setInterval(pomTick, 1000);
+  } else {
+    clearInterval(pomInterval);
+    if (pomIsWork) pomPauseCount++; // count pauses on work rounds
+  }
+}
+
+function pomTick() {
+  pomSecsLeft--;
+  if (pomSecsLeft < 0) {
+    pomNext();
+    return;
+  }
+  updatePomDisplay();
+}
+
+function pomNext() {
+  // Record completed work round in history
+  if (pomIsWork) {
+    const status = pomPauseCount >= 2 ? 'paused' : 'complete';
+    addPomHistory(`Ronda ${pomRound} completada`, status);
+    pomPauseCount = 0;
+  }
+  pomIsWork = !pomIsWork;
+  if (pomIsWork) pomRound++;
+  pomSecsLeft = (pomIsWork ? pomWorkMins : pomRestMins) * 60;
+  pomTotalSecs = pomSecsLeft;
+  updatePomDisplay();
+  if (Notification.permission === 'granted') {
+    new Notification('1926', { body: pomIsWork ? `Ronda ${pomRound} — ¡A trabajar!` : '¡Descanso! 10 minutos.' });
+  }
+}
+
+function pomReset() {
+  // If a work round was in progress and had started, record as incomplete
+  const elapsed = pomTotalSecs - pomSecsLeft;
+  if (pomIsWork && elapsed > 30) {
+    addPomHistory(`Ronda ${pomRound} interrumpida`, 'incomplete');
+  }
+  clearInterval(pomInterval);
+  pomRunning = false;
+  pomIsWork = true;
+  pomRound = 1;
+  pomHadPause = false;
+  pomPauseCount = 0;
+  pomSecsLeft = pomWorkMins * 60;
+  pomTotalSecs = pomSecsLeft;
+  updatePomDisplay();
+  document.querySelector('#pom-controls .pom-btn').textContent = '▶ Inicio';
+}
+
+function addPomHistory(label, status) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+  const timeStr = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  pomHistory.unshift({ label, status, date: dateStr, time: timeStr });
+  renderPomHistory();
+}
+
+function renderPomHistory() {
+  const panel = document.getElementById('pom-history-panel');
+  const empty = document.getElementById('pom-hist-empty');
+  if (pomHistory.length === 0) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  // Remove all items except empty placeholder
+  Array.from(panel.querySelectorAll('.pom-hist-item')).forEach(el => el.remove());
+  pomHistory.forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'pom-hist-item';
+    item.innerHTML = `
+      <div class="pom-hist-dot ${entry.status}"></div>
+      <div class="pom-hist-text">
+        <strong>${entry.label}</strong>
+        ${entry.date} · ${entry.time}
+      </div>`;
+    panel.appendChild(item);
+  });
+}
+
+function togglePomHistory() {
+  const panel = document.getElementById('pom-history-panel');
+  const btn = document.getElementById('pom-history-toggle');
+  panel.classList.toggle('open');
+  btn.textContent = panel.classList.contains('open') ? '▴ Historial' : '▾ Historial';
+}
+
+function updatePomDisplay() {
+  const m = String(Math.floor(pomSecsLeft / 60)).padStart(2, '0');
+  const s = String(pomSecsLeft % 60).padStart(2, '0');
+  document.getElementById('pom-time').textContent = `${m}:${s}`;
+  const pct = (pomSecsLeft / pomTotalSecs) * 100;
+  const bar = document.getElementById('pom-bar');
+  bar.style.width = pct + '%';
+  bar.className = pomIsWork ? '' : 'rest';
+  const mode = document.getElementById('pom-mode');
+  mode.textContent = pomIsWork ? 'Trabajo' : 'Descanso';
+  mode.className = pomIsWork ? 'work' : 'rest';
+  document.getElementById('pom-rounds').textContent = `Ronda ${pomRound}`;
+}
+
+function togglePomSettings() {
+  document.getElementById('pom-settings-row').classList.toggle('open');
+}
+
+function applyPomSettings() {
+  const w = parseInt(document.getElementById('pom-work-input').value) || 60;
+  const r = parseInt(document.getElementById('pom-rest-input').value) || 10;
+  pomWorkMins = w; pomRestMins = r;
+  pomReset();
+}
+
+// Request notification permission
+if (Notification && Notification.permission === 'default') Notification.requestPermission();
+
+// MICROPHONE
+let recognition = null;
+let micActive = false;
+let micLang = 'es-ES';
+
+function toggleLang() {
+  micLang = micLang === 'es-ES' ? 'en-US' : 'es-ES';
+  document.getElementById('lang-toggle').textContent = micLang === 'es-ES' ? 'ES' : 'EN';
+  if (micActive) { stopMic(); startMic(); }
+}
+
+function toggleMic() {
+  if (micActive) stopMic();
+  else startMic();
+}
+
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome.'); return; }
+  recognition = new SR();
+  recognition.lang = micLang;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  let finalText = '';
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+      else interim = e.results[i][0].transcript;
+    }
+    const inp = document.getElementById('user-input');
+    inp.value = finalText + interim;
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 130) + 'px';
+  };
+  recognition.onerror = () => stopMic();
+  recognition.onend = () => { if (micActive) recognition.start(); };
+  recognition.start();
+  micActive = true;
+  document.getElementById('mic-btn').classList.add('listening');
+  document.getElementById('mic-btn').querySelector('svg').style.color = '#c0614a';
+}
+
+function stopMic() {
+  if (recognition) { recognition.onend = null; recognition.stop(); recognition = null; }
+  micActive = false;
+  document.getElementById('mic-btn').classList.remove('listening');
+  document.getElementById('mic-btn').querySelector('svg').style.color = '#8c8880';
+}
+
+// INIT
+document.getElementById('user-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 130) + 'px';
+});
+
+document.getElementById('user-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function welcome() {
+  addMsg('assistant', `Hola, soy tu profesor de Finanzas Corporativas. 👋<br><br>
+Ya sé cómo trabajar contigo. Aquí va cómo usar esto:<br><br>
+<strong>📄 Para estudiar un tema:</strong> Sube tu PDF desde la barra izquierda. Lo leeré completo al instante.<br><br>
+<strong>🎯 Acciones rápidas:</strong> Usa los botones del lateral para pedir resúmenes, preguntas de examen, términos clave o explicaciones con analogías.<br><br>
+<strong>💾 Memoria:</strong> Al terminar, exporta la sesión. La próxima vez la cargas con el botón "Cargar sesión" y no tienes que repetirme nada de lo que ya vimos.<br><br>
+<strong>Una cosa más:</strong> si en cualquier momento hay una palabra o parte que no queda clara, dímelo. Aquí no hay preguntas tontas.<br><br>
+¿Empezamos? Puedes subir un PDF o preguntarme directamente.`, true);
+}
+
+welcome();
+</script>
+</body>
+</html>
